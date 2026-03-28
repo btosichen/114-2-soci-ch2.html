@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔥 臺灣多元文化超強自學網</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        /* 基礎背景與字體 */
+        body {
+            background: linear-gradient(135deg, #a8c0ff 0%, #ffafbd 100%);
+            background-attachment: fixed;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, 'Microsoft JhengHei';
+            min-height: 100vh;
+        }
+
+        /* 毛玻璃效果 */
+        .glass {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+            border-radius: 1.5rem;
+        }
+
+        /* 翻牌動畫 */
+        .flip-card {
+            background-color: transparent;
+            width: 100%;
+            height: 200px;
+            perspective: 1000px;
+            cursor: pointer;
+        }
+        .flip-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+        .flip-card.flipped .flip-card-inner { transform: rotateY(180deg); }
+        .flip-card-front, .flip-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 1.5rem;
+            padding: 1rem;
+        }
+        .flip-card-front {
+            background: linear-gradient(135deg, #FF9A9E 0%, #FECFEF 100%);
+            color: #333;
+            border: 2px solid white;
+        }
+        .flip-card-back {
+            background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
+            color: white;
+            transform: rotateY(180deg);
+            border: 2px solid white;
+        }
+
+        /* 拖曳遊戲 */
+        .draggable { cursor: grab; transition: transform 0.2s; }
+        .draggable:active { cursor: grabbing; transform: scale(1.05); }
+        .dropzone {
+            min-height: 100px;
+            border: 3px dashed rgba(255,255,255,0.8);
+            transition: background 0.3s;
+        }
+        .dropzone.dragover { background: rgba(255,255,255,0.6); }
+
+        .btn-hover { transition: all 0.3s ease; }
+        .btn-hover:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="text-gray-800 p-4 md:p-8">
+
+    <nav class="glass mb-8 p-4 flex flex-col md:flex-row justify-between items-center max-w-6xl mx-auto">
+        <h1 class="text-2xl md:text-3xl font-bold text-indigo-800 flex items-center mb-4 md:mb-0">
+            <i class="fa-solid fa-earth-asia mr-3 text-pink-500"></i>臺灣多元文化學習網
+        </h1>
+        <div id="userInfo" class="text-lg font-bold text-purple-700" style="display: none;">
+            👤 <span id="displayUsername"></span> | 🏆 積分：<span id="displayScore">0</span>
+        </div>
+    </nav>
+
+    <!-- 登入畫面 -->
+    <section id="login-section" class="max-w-md mx-auto glass p-8 text-center mt-20">
+        <div class="text-6xl mb-4">🚀</div>
+        <h2 class="text-2xl font-bold mb-6">歡迎來到文化挑戰營</h2>
+        <input type="text" id="usernameInput" placeholder="請輸入班級座號與姓名 (例: 501-01 王小明)" class="w-full p-3 rounded-xl border-2 border-indigo-200 mb-6 text-center text-lg focus:outline-none focus:border-indigo-500">
+        <button onclick="startGame()" class="btn-hover w-full bg-indigo-500 text-white font-bold py-3 px-6 rounded-xl text-lg shadow-lg">
+            開始挑戰！
+        </button>
+    </section>
+
+    <!-- 主選單 (預設隱藏) -->
+    <div id="main-menu" class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" style="display: none;">
+        <button onclick="showSection('memory')" class="glass btn-hover p-6 text-center rounded-2xl">
+            <div class="text-5xl mb-3">🧠</div>
+            <h3 class="text-xl font-bold">超強記憶區</h3>
+            <p class="text-sm text-gray-600">翻牌背口訣</p>
+        </button>
+        <button onclick="showSection('notes')" class="glass btn-hover p-6 text-center rounded-2xl">
+            <div class="text-5xl mb-3">📖</div>
+            <h3 class="text-xl font-bold">重點整理</h3>
+            <p class="text-sm text-gray-600">精華筆記卡片</p>
+        </button>
+        <button onclick="showSection('dnd')" class="glass btn-hover p-6 text-center rounded-2xl">
+            <div class="text-5xl mb-3">🎮</div>
+            <h3 class="text-xl font-bold">拖曳配對</h3>
+            <p class="text-sm text-gray-600">動手玩遊戲</p>
+        </button>
+        <button onclick="showSection('quiz')" class="glass btn-hover p-6 text-center rounded-2xl border-4 border-yellow-400">
+            <div class="text-5xl mb-3">🔥</div>
+            <h3 class="text-xl font-bold text-red-600">30題大挑戰</h3>
+            <p class="text-sm text-gray-600">測驗成績會紀錄喔！</p>
+        </button>
+        <button onclick="showSection('map')" class="glass btn-hover p-6 text-center rounded-2xl md:col-span-2 lg:col-span-4">
+            <div class="text-3xl mb-3">🗺️</div>
+            <h3 class="text-xl font-bold">學習雷達圖</h3>
+            <p class="text-sm text-gray-600">查看你的學習成果</p>
+        </button>
+    </div>
+
+    <!-- 內容區塊 (預設隱藏) -->
+    <main id="content-container" class="max-w-6xl mx-auto" style="display: none;">
+        <!-- 1. 超強記憶區 -->
+        <section id="sec-memory" class="glass p-8" style="display: none;">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-indigo-800"><i class="fa-solid fa-brain text-pink-500"></i> 秒記口訣翻翻牌</h2>
+                <button onclick="backToMenu()" class="bg-white px-4 py-2 rounded-lg shadow btn-hover">回主選單</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- 卡片1 -->
+                <div class="flip-card" onclick="this.classList.toggle('flipped')">
+                    <div class="flip-card-inner">
+                        <div class="flip-card-front">
+                            <h3 class="text-2xl font-bold mb-2">為什麼適合種稻？</h3>
+                            <p class="text-sm text-gray-700">(點擊翻面)</p>
+                        </div>
+                        <div class="flip-card-back">
+                            <h3 class="text-3xl font-bold text-yellow-300 mb-2">熱雨平水改</h3>
+                            <p class="text-sm">🌡️熱 🌧️雨 🏞️平 💧水 🧬改</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- 卡片2 -->
+                <div class="flip-card" onclick="this.classList.toggle('flipped')">
+                    <div class="flip-card-inner">
+                        <div class="flip-card-front">
+                            <h3 class="text-2xl font-bold mb-2">米食文化來源？</h3>
+                            <p class="text-sm text-gray-700">(點擊翻面)</p>
+                        </div>
+                        <div class="flip-card-back">
+                            <h3 class="text-3xl font-bold text-yellow-300 mb-2">原中日東</h3>
+                            <p class="text-sm">原(竹筒飯) 中(米粉) 日(壽司) 東(河粉)</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- 卡片3 -->
+                <div class="flip-card" onclick="this.classList.toggle('flipped')">
+                    <div class="flip-card-inner">
+                        <div class="flip-card-front">
+                            <h3 class="text-2xl font-bold mb-2">各時期建築特色？</h3>
+                            <p class="text-sm text-gray-700">(點擊翻面)</p>
+                        </div>
+                        <div class="flip-card-back">
+                            <h3 class="text-3xl font-bold text-yellow-300 mb-2">清防守、日現代</h3>
+                            <p class="text-sm">清(四合院/槍孔) 日(紅磚/西式)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. 重點整理區 -->
+        <section id="sec-notes" class="glass p-8" style="display: none;">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-indigo-800"><i class="fa-solid fa-book-open text-blue-500"></i> 必考重點圖卡</h2>
+                <button onclick="backToMenu()" class="bg-white px-4 py-2 rounded-lg shadow btn-hover">回主選單</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white bg-opacity-60 p-6 rounded-xl border-l-8 border-pink-400">
+                    <h3 class="text-2xl font-bold mb-4">🍚 米食創新與危機</h3>
+                    <p>🌟 <b>創新：</b>融合＝新料理 (抹茶湯圓、河粉蛋餅)</p>
+                    <p>📉 <b>危機：</b>外食多＋進口多 導致吃米量下降</p>
+                    <p>🛡️ <b>解方：</b>推廣食農教育、開發新產品</p>
+                </div>
+                <div class="bg-white bg-opacity-60 p-6 rounded-xl border-l-8 border-blue-400">
+                    <h3 class="text-2xl font-bold mb-4">🏠 建築與生活</h3>
+                    <p>核心：<b>建築反映生活需求與文化背景</b></p>
+                    <p>🧱 <b>就地取材：</b>竹子、茅草蓋房</p>
+                    <p>🌧️ <b>適應氣候：</b>斜屋頂方便排水</p>
+                    <p>🛡️ <b>防禦考量：</b>清代聚落牆壁留有槍孔</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. 拖曳遊戲 -->
+        <section id="sec-dnd" class="glass p-8" style="display: none;">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-indigo-800"><i class="fa-solid fa-puzzle-piece text-orange-500"></i> 族群與米食配對</h2>
+                <button onclick="backToMenu()" class="bg-white px-4 py-2 rounded-lg shadow btn-hover">回主選單</button>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white bg-opacity-60 rounded-xl p-4 text-center"><h3 class="font-bold text-green-700">🌲 原住民</h3><div class="dropzone" data-target="yuan"></div></div>
+                <div class="bg-white bg-opacity-60 rounded-xl p-4 text-center"><h3 class="font-bold text-red-700">🏮 中國移民</h3><div class="dropzone" data-target="zhong"></div></div>
+                <div class="bg-white bg-opacity-60 rounded-xl p-4 text-center"><h3 class="font-bold text-pink-700">🌸 日本人</h3><div class="dropzone" data-target="ri"></div></div>
+                <div class="bg-white bg-opacity-60 rounded-xl p-4 text-center"><h3 class="font-bold text-blue-700">🌴 東南亞</h3><div class="dropzone" data-target="dong"></div></div>
+            </div>
+            <div class="bg-indigo-100 bg-opacity-50 p-4 rounded-xl shadow-inner border border-indigo-200">
+                <div class="flex flex-wrap justify-center gap-4" id="drag-source">
+                    <div class="draggable glass px-6 py-3 font-bold" draggable="true" data-match="ri">🍣 壽司</div>
+                    <div class="draggable glass px-6 py-3 font-bold" draggable="true" data-match="zhong">🍜 米粉</div>
+                    <div class="draggable glass px-6 py-3 font-bold" draggable="true" data-match="dong">🍲 河粉</div>
+                    <div class="draggable glass px-6 py-3 font-bold" draggable="true" data-match="yuan">🎍 竹筒飯</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. 30題測驗 (含紀錄功能) -->
+        <section id="sec-quiz" class="glass p-8 relative" style="display: none;">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-indigo-800"><i class="fa-solid fa-fire text-red-500"></i> 文化大挑戰 (共30題)</h2>
+                <button onclick="backToMenu()" class="bg-white px-4 py-2 rounded-lg shadow btn-hover">暫停測驗</button>
+            </div>
+            
+            <div id="quiz-start-screen" class="text-center py-10">
+                <p class="text-xl mb-6 font-bold text-red-600">※ 注意：完成作答後，成績與作答時間將自動上傳給老師！</p>
+                <button onclick="startQuiz()" class="btn-hover bg-gradient-to-r from-pink-500 to-orange-400 text-white font-bold py-3 px-8 rounded-full text-xl shadow-lg">
+                    開始測驗並計時 ⏱️
+                </button>
+            </div>
+
+            <div id="quiz-question-screen" style="display: none;">
+                <div class="flex justify-between text-sm font-bold text-gray-600 mb-2">
+                    <span id="quiz-progress">題數: 1/30</span>
+                    <span id="time-display" class="text-blue-600">作答中...</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mb-6">
+                    <div id="quiz-bar" class="bg-indigo-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                
+                <h3 id="question-text" class="text-2xl font-bold mb-6 text-gray-800 bg-white bg-opacity-60 p-4 rounded-xl"></h3>
+                <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                <div id="feedback-area" class="mt-6 p-4 rounded-xl font-bold text-lg text-center" style="display: none;"></div>
+                <button id="next-btn" onclick="nextQuestion()" class="mt-4 w-full bg-indigo-600 text-white font-bold py-3 rounded-xl btn-hover" style="display: none;">
+                    下一題 ➡️
+                </button>
+            </div>
+
+            <div id="quiz-result-screen" class="text-center py-10" style="display: none;">
+                <h2 class="text-4xl font-bold mb-4">測驗結束！</h2>
+                <div class="text-6xl mb-4" id="result-emoji">🏆</div>
+                <p class="text-2xl mb-2">你的總分是：<span id="final-score" class="font-bold text-red-500"></span> / 100</p>
+                <p class="text-lg text-blue-600 font-bold mb-2">花費時間：<span id="final-time"></span></p>
+                
+                <!-- 雲端紀錄狀態顯示區 -->
+                <div id="upload-status" class="inline-block bg-yellow-100 text-yellow-800 border-2 border-yellow-400 px-6 py-2 rounded-full font-bold mb-6 animate-pulse">
+                    📡 正在將成績上傳至雲端紀錄區...
+                </div>
+
+                <p id="result-message" class="text-lg text-gray-700 mb-8"></p>
+                
+                <button onclick="showSection('map'); updateChart();" class="btn-hover bg-green-500 text-white font-bold py-3 px-8 rounded-full text-xl shadow-lg mr-2">
+                    查看雷達圖
+                </button>
+                <button onclick="backToMenu()" class="btn-hover bg-gray-400 text-white font-bold py-3 px-8 rounded-full text-xl shadow-lg">
+                    回主選單
+                </button>
+            </div>
+        </section>
+
+        <!-- 5. 學習雷達圖 -->
+        <section id="sec-map" class="glass p-8 text-center" style="display: none;">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-indigo-800"><i class="fa-solid fa-chart-pie text-purple-500"></i> 學習分析雷達圖</h2>
+                <button onclick="backToMenu()" class="bg-white px-4 py-2 rounded-lg shadow btn-hover">回主選單</button>
+            </div>
+            <div class="relative w-full max-w-md mx-auto aspect-square bg-white bg-opacity-50 rounded-full p-4 shadow-inner">
+                <canvas id="radarChart"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // ==========================================
+        // ★★★ 教師設定區 ★★★
+        // 請將你剛才發布的 Google Apps Script 網址貼在下方的引號內！
+        // ==========================================
+        const GAS_URL = "請將你的部署網址貼到這裡"; 
+        
+        let username = "";
+        let score = 0;
+        let radarScores = { basic: 0, advanced: 0, pro: 0, rice: 0, arch: 0 }; 
+        
+        // 雲端紀錄所需變數
+        let startTime, endTime;
+        let correctQsArray = [];
+        let incorrectQsArray = [];
+
+        function startGame() {
+            const input = document.getElementById('usernameInput').value.trim();
+            if(!input) return alert("請輸入座號與名字喔！");
+            username = input;
+            document.getElementById('displayUsername').innerText = username;
+            
+            // 隱藏登入區塊，顯示使用者資訊與主選單
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('userInfo').style.display = 'block';
+            document.getElementById('main-menu').style.display = ''; // 清除 display:none，恢復 grid
+            
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            initChart();
+        }
+
+        function showSection(secId) {
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('content-container').style.display = 'block';
+            
+            // 隱藏所有子區塊
+            ['memory', 'notes', 'dnd', 'quiz', 'map'].forEach(id => {
+                document.getElementById('sec-' + id).style.display = 'none';
+            });
+            // 顯示選擇的區塊
+            document.getElementById('sec-' + secId).style.display = 'block';
+        }
+
+        function backToMenu() {
+            document.getElementById('content-container').style.display = 'none';
+            document.getElementById('main-menu').style.display = ''; // 清除 display:none，恢復 grid
+        }
+
+        // 拖曳遊戲邏輯
+        const draggables = document.querySelectorAll('.draggable');
+        const dropzones = document.querySelectorAll('.dropzone');
+        draggables.forEach(d => {
+            d.addEventListener('dragstart', () => d.classList.add('dragging'));
+            d.addEventListener('dragend', () => d.classList.remove('dragging'));
+        });
+        dropzones.forEach(zone => {
+            zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+            zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+            zone.addEventListener('drop', e => {
+                e.preventDefault();
+                zone.classList.remove('dragover');
+                const draggedItem = document.querySelector('.dragging');
+                if(!draggedItem) return;
+                if(draggedItem.getAttribute('data-match') === zone.getAttribute('data-target')) {
+                    zone.appendChild(draggedItem);
+                    draggedItem.classList.add('bg-green-100', 'border-2', 'border-green-500', 'cursor-default');
+                    draggedItem.draggable = false;
+                    score += 10;
+                    document.getElementById('displayScore').innerText = score;
+                    confetti({ particleCount: 50, spread: 30, origin: { y: 0.8 } });
+                } else {
+                    draggedItem.classList.add('animate-bounce');
+                    setTimeout(() => draggedItem.classList.remove('animate-bounce'), 500);
+                }
+            });
+        });
+
+        // 題庫資料
+        const questions = [
+            // 基礎題
+            { q: "臺灣氣候溫暖、雨量充足，最適合種植哪一種農作物？", options: ["小麥", "水稻", "玉米", "大豆"], ans: 1, type: "rice", diff: "basic" },
+            { q: "影響稻米生長的因素中，哪一項屬於「人為因素」？", options: ["氣候", "地形", "雨量", "水利設施"], ans: 3, type: "rice", diff: "basic" },
+            { q: "「竹筒飯」是哪一個族群的傳統米食？", options: ["原住民", "日本移民", "中國漢人", "東南亞新住民"], ans: 0, type: "rice", diff: "basic" },
+            { q: "日治時期引進臺灣，深受日本人喜愛的米食是？", options: ["河粉", "壽司", "米粉", "湯圓"], ans: 1, type: "rice", diff: "basic" },
+            { q: "炒米粉、蘿蔔糕主要是早期哪個地方的移民帶來的？", options: ["日本", "東南亞", "中國", "歐美"], ans: 2, type: "rice", diff: "basic" },
+            { q: "新住民帶來的「河粉」，主要源自哪裡？", options: ["日本", "東南亞", "韓國", "歐洲"], ans: 1, type: "rice", diff: "basic" },
+            { q: "抹茶湯圓結合了哪兩種文化？", options: ["日本與臺灣", "韓國與臺灣", "泰國與臺灣", "美國與臺灣"], ans: 0, type: "rice", diff: "basic" },
+            { q: "臺灣米食文化非常多元，最主要的原因是什麼？", options: ["米太便宜", "不同族群交流融合", "政府規定", "外國人喜歡"], ans: 1, type: "rice", diff: "basic" },
+            { q: "臺灣早期主要種植的稻米品種稱為？", options: ["蓬萊米", "越光米", "在來米", "糯米"], ans: 2, type: "rice", diff: "basic" },
+            { q: "日治時期改良成功，口感軟Q的稻米稱為？", options: ["在來米", "蓬萊米", "紫米", "糙米"], ans: 1, type: "rice", diff: "basic" },
+            // 進階題
+            { q: "興建水利設施對農業最大的幫助是什麼？", options: ["讓稻米長得更高", "穩定灌溉水源增加產量", "改變地形", "消滅害蟲"], ans: 1, type: "rice", diff: "advanced" },
+            { q: "清帝國時期，臺灣稻米能大量出口的原因是？", options: ["氣候突然變冷", "外國人強迫購買", "漢人興建水利設施提升產量", "原住民大量種植"], ans: 2, type: "rice", diff: "advanced" },
+            { q: "早期先民蓋房子常「就地取材」，請問會用什麼材料？", options: ["鋼筋水泥", "竹子與茅草", "塑膠與玻璃", "大理石"], ans: 1, type: "arch", diff: "advanced" },
+            { q: "建築樣式會隨著什麼而改變？", options: ["時代變遷與生活需求", "天上星星的位置", "每天的天氣", "市長的規定"], ans: 0, type: "arch", diff: "advanced" },
+            { q: "清帝國時期漢人傳統聚落常見的建築是？", options: ["高樓大廈", "四合院", "西式洋樓", "日式木屋"], ans: 1, type: "arch", diff: "advanced" },
+            { q: "日治時期引進了哪些新的建築材料？", options: ["竹子與泥土", "茅草與木頭", "紅磚與鋼筋水泥", "帆布與鐵皮"], ans: 2, type: "arch", diff: "advanced" },
+            { q: "臺灣傳統建築的屋頂常做成「斜的」，原因是？", options: ["比較好看", "方便雨水排下", "防地震", "習俗規定"], ans: 1, type: "arch", diff: "advanced" },
+            { q: "現在街頭有許多異國料理，這代表什麼現象？", options: ["大家都沒錢", "臺灣人不再煮飯", "國際交流與文化融合", "農業衰退"], ans: 2, type: "rice", diff: "advanced" },
+            { q: "近年臺灣人吃米的數量減少，主要原因是？", options: ["稻米有毒", "外食與進口食物變多", "禁止種田", "米變太貴"], ans: 1, type: "rice", diff: "advanced" },
+            { q: "政府為何要推廣「食米教育」？", options: ["想賺小學生的錢", "為了救文化與農業產業", "因為麵粉不夠", "規定大家不能吃麵"], ans: 1, type: "rice", diff: "advanced" },
+            // 高階題
+            { q: "比較「在來米」與「蓬萊米」，下列敘述何者正確？", options: ["在來米是日本人改良的", "蓬萊米口感較硬", "在來米適合做蘿蔔糕", "蓬萊米是原住民傳統"], ans: 2, type: "rice", diff: "pro" },
+            { q: "文化融合最大的優點是什麼？", options: ["消滅弱勢文化", "創造更多元豐富的新文化", "讓大家都吃一樣的東西", "減少溝通機會"], ans: 1, type: "rice", diff: "pro" },
+            { q: "對於不同族群的飲食文化，我們應該抱持什麼態度？", options: ["批評嘲笑", "強迫他們改變", "互相理解與尊重", "視而不見"], ans: 2, type: "rice", diff: "pro" },
+            { q: "「豬血糕」被外國人評為奇怪食物，我們應該怎麼看？", options: ["覺得丟臉不吃了", "生氣罵外國人", "了解這是早期先民惜食的文化展現", "馬上改配方"], ans: 2, type: "rice", diff: "pro" },
+            { q: "清代建築牆壁上留有「槍孔」，反映了當時什麼生活背景？", options: ["為了通風", "為了美觀", "為了偷看外面", "治安不佳需要防禦"], ans: 3, type: "arch", diff: "pro" },
+            { q: "有些日治時期的老建築被改造成展覽館，這有什麼意義？", options: ["節省蓋新房子的錢", "保留文化記憶並活化利用", "因為拆掉太麻煩", "為了讓蚊子住"], ans: 1, type: "arch", diff: "pro" },
+            { q: "米食食用量下降，可能會造成什麼嚴重影響？", options: ["農地荒廢、糧食自給率下降", "大家變得更健康", "臺灣會下雪", "房價會下跌"], ans: 0, type: "rice", diff: "pro" },
+            { q: "「全球化」對臺灣飲食帶來什麼影響？", options: ["只能吃臺灣菜", "食物選擇變少", "能輕易吃到各國食物", "大家都自己種菜"], ans: 2, type: "rice", diff: "pro" },
+            { q: "下列哪一項最能代表「文化融合」的創新產品？", options: ["傳統白飯", "珍珠奶茶披薩", "白開水", "水煮蛋"], ans: 1, type: "rice", diff: "pro" },
+            { q: "總結來說，臺灣多元文化的形成公式是？", options: ["單一族群發展", "政府強制規定", "不同族群交流×時代變化×生活融合", "完全複製外國"], ans: 2, type: "rice", diff: "pro" }
+        ];
+
+        let currentQIndex = 0;
+        let correctAnswersCount = 0;
+
+        function startQuiz() {
+            currentQIndex = 0;
+            correctAnswersCount = 0;
+            correctQsArray = [];    
+            incorrectQsArray = [];  
+            radarScores = { basic: 0, advanced: 0, pro: 0, rice: 0, arch: 0 };
+            
+            // 開始計時
+            startTime = new Date();
+            
+            document.getElementById('quiz-start-screen').style.display = 'none';
+            document.getElementById('quiz-result-screen').style.display = 'none';
+            document.getElementById('quiz-question-screen').style.display = 'block';
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const q = questions[currentQIndex];
+            document.getElementById('quiz-progress').innerText = `題數: ${currentQIndex + 1}/${questions.length}`;
+            document.getElementById('quiz-bar').style.width = `${(currentQIndex / questions.length) * 100}%`;
+            document.getElementById('question-text').innerText = `第 ${currentQIndex + 1} 題：${q.q}`;
+            
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+            document.getElementById('feedback-area').style.display = 'none';
+            document.getElementById('next-btn').style.display = 'none';
+
+            q.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'bg-white bg-opacity-80 p-4 rounded-xl text-lg font-bold text-gray-800 hover:bg-indigo-100 border-2 border-transparent hover:border-indigo-400 transition-all text-left';
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswer(index, btn);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selectedIndex, btnElement) {
+            const q = questions[currentQIndex];
+            const feedback = document.getElementById('feedback-area');
+            const btns = document.getElementById('options-container').querySelectorAll('button');
+            btns.forEach(b => b.disabled = true); 
+
+            if (selectedIndex === q.ans) {
+                btnElement.classList.replace('bg-white', 'bg-green-400');
+                btnElement.classList.add('text-white');
+                feedback.innerHTML = "✅ 答對了！";
+                feedback.className = "mt-6 p-4 rounded-xl font-bold text-lg text-center bg-green-100 text-green-800 border-2 border-green-500 block";
+                correctAnswersCount++;
+                
+                radarScores[q.diff]++;
+                radarScores[q.type]++;
+                
+                correctQsArray.push(`第${currentQIndex + 1}題`); 
+                if(Math.random() > 0.5) confetti({ particleCount: 30, origin: { y: 0.7 } });
+            } else {
+                btnElement.classList.replace('bg-white', 'bg-red-400');
+                btnElement.classList.add('text-white');
+                btns[q.ans].classList.replace('bg-white', 'bg-green-400');
+                btns[q.ans].classList.add('text-white');
+                feedback.innerHTML = "❌ 答錯囉！";
+                feedback.className = "mt-6 p-4 rounded-xl font-bold text-lg text-center bg-red-100 text-red-800 border-2 border-red-500 block";
+                
+                incorrectQsArray.push(`第${currentQIndex + 1}題`); 
+            }
+
+            feedback.style.display = 'block';
+            document.getElementById('next-btn').style.display = 'block';
+        }
+
+        function nextQuestion() {
+            currentQIndex++;
+            if (currentQIndex < questions.length) {
+                loadQuestion();
+            } else {
+                endQuiz();
+            }
+        }
+
+        function endQuiz() {
+            endTime = new Date(); // 結束計時
+            document.getElementById('quiz-question-screen').style.display = 'none';
+            document.getElementById('quiz-result-screen').style.display = 'block';
+            
+            // 計算分數
+            const finalScore = Math.round((correctAnswersCount / questions.length) * 100);
+            document.getElementById('final-score').innerText = finalScore;
+            
+            // 計算作答時間
+            let timeDiff = Math.floor((endTime - startTime) / 1000); 
+            let minutes = Math.floor(timeDiff / 60);
+            let seconds = timeDiff % 60;
+            let timeTakenStr = `${minutes}分 ${seconds}秒`;
+            document.getElementById('final-time').innerText = timeTakenStr;
+
+            // 準備上傳到 GAS 的資料
+            let today = new Date();
+            let dateStr = today.getFullYear() + '/' + (today.getMonth()+1) + '/' + today.getDate() + ' ' + String(today.getHours()).padStart(2, '0') + ':' + String(today.getMinutes()).padStart(2, '0');
+            
+            let postData = {
+                date: dateStr,
+                name: username,
+                score: finalScore,
+                timeTaken: timeTakenStr,
+                correctQs: correctQsArray.length > 0 ? correctQsArray.join(", ") : "無",
+                incorrectQs: incorrectQsArray.length > 0 ? incorrectQsArray.join(", ") : "無"
+            };
+
+            // 呼叫 GAS API 傳送資料
+            const statusDiv = document.getElementById('upload-status');
+            if(GAS_URL !== "請將你的部署網址貼到這裡") {
+                fetch(GAS_URL, {
+                    method: "POST",
+                    body: JSON.stringify(postData),
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    statusDiv.className = "inline-block bg-green-100 text-green-800 border-2 border-green-500 px-6 py-2 rounded-full font-bold mb-6";
+                    statusDiv.innerHTML = "✅ 成績已成功上傳至老師的雲端紀錄！";
+                })
+                .catch(err => {
+                    statusDiv.className = "inline-block bg-red-100 text-red-800 border-2 border-red-500 px-6 py-2 rounded-full font-bold mb-6";
+                    statusDiv.innerHTML = "❌ 上傳失敗，請檢查網路連線。";
+                    console.error("GAS 錯誤:", err);
+                });
+            } else {
+                statusDiv.className = "inline-block bg-gray-100 text-gray-800 border-2 border-gray-400 px-6 py-2 rounded-full font-bold mb-6";
+                statusDiv.innerHTML = "⚠️ 老師尚未設定雲端紀錄網址，成績僅顯示於此畫面。";
+            }
+
+            // 更新評語
+            let msg = "";
+            let emoji = "🏆";
+            if(finalScore === 100) { msg = "太神啦！你是多元文化大師！"; emoji = "👑"; confetti({ particleCount: 200, spread: 100 }); }
+            else if(finalScore >= 80) { msg = "超棒！觀念非常清楚喔！"; emoji = "🌟"; confetti({ particleCount: 100 }); }
+            else if(finalScore >= 60) { msg = "不錯喔！再複習一下口訣會更強！"; emoji = "👍"; }
+            else { msg = "沒關係，去「重點整理區」多看兩眼再來挑戰！"; emoji = "💪"; }
+            
+            document.getElementById('result-message').innerText = msg;
+            document.getElementById('result-emoji').innerText = emoji;
+        }
+
+        // --- Chart.js 雷達圖 ---
+        let myRadarChart = null;
+        function initChart() {
+            const ctx = document.getElementById('radarChart').getContext('2d');
+            myRadarChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['基礎觀念', '進階應用', '高階分析', '米食文化', '建築文化'],
+                    datasets: [{
+                        label: '能力值',
+                        data: [0, 0, 0, 0, 0],
+                        backgroundColor: 'rgba(236, 72, 153, 0.4)',
+                        borderColor: 'rgba(236, 72, 153, 1)',
+                        pointBackgroundColor: 'rgba(99, 102, 241, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    scales: { r: { angleLines: { display: true }, suggestedMin: 0, suggestedMax: 10 } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function updateChart() {
+            if(!myRadarChart) return;
+            const dBasic = (radarScores.basic / 10) * 10;
+            const dAdv = (radarScores.advanced / 10) * 10;
+            const dPro = (radarScores.pro / 10) * 10;
+            const dRice = (radarScores.rice / 22) * 10;
+            const dArch = (radarScores.arch / 8) * 10;
+
+            myRadarChart.data.datasets[0].data = [dBasic, dAdv, dPro, dRice || 0, dArch || 0];
+            myRadarChart.update();
+        }
+    </script>
+</body>
+</html>
